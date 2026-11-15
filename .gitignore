@@ -1,0 +1,8 @@
+# скачанные датасеты (большие, качаются скриптами из datasets/)
+datasets/raw/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.ipynb_checkpoints/
