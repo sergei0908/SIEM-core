@@ -1,0 +1,42 @@
+api:
+  enabled: true
+  address: 0.0.0.0:8686
+
+sources:
+  gen_in:
+    type: http_server
+    address: 0.0.0.0:8080
+    framing:
+      method: newline_delimited   # NDJSON: одно событие на строку
+    decoding:
+      codec: json
+  vector_metrics:
+    type: internal_metrics
+
+transforms:
+  normalize:
+    type: remap
+    inputs: [gen_in]
+    source: |
+      del(.source_type)
+      del(.path)
+      del(.timestamp)
+
+sinks:
+  to_kafka:
+    type: kafka
+    inputs: [normalize]
+    bootstrap_servers: kafka:19092
+    topic: logs-raw
+    key_field: host
+    encoding:
+      codec: json
+    buffer:
+      type: memory
+      max_events: 10000
+      when_full: block
+
+  metrics_out:
+    type: prometheus_exporter
+    inputs: [vector_metrics]
+    address: 0.0.0.0:9598
