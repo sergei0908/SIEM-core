@@ -1,0 +1,55 @@
+api:
+  enabled: true
+  address: 0.0.0.0:8686
+
+sources:
+  from_kafka:
+    type: kafka
+    bootstrap_servers: kafka:19092
+    group_id: ch-shipper
+    topics: [logs-raw]
+    auto_offset_reset: earliest
+    commit_interval_ms: 1000
+    decoding:
+      codec: json
+  vector_metrics:
+    type: internal_metrics
+
+transforms:
+  clean:
+    type: remap
+    inputs: [from_kafka]
+    source: |
+      del(.topic)
+      del(.partition)
+      del(.offset)
+      del(.message_key)
+      del(.headers)
+      del(.source_type)
+      del(.timestamp)
+
+sinks:
+  to_clickhouse:
+    type: clickhouse
+    inputs: [clean]
+    endpoint: http://clickhouse:8123
+    database: siem
+    table: logs
+    auth:
+      strategy: basic
+      user: siem
+      password: siem
+    skip_unknown_fields: true
+    date_time_best_effort: true
+    batch:
+      max_events: 10000
+      timeout_secs: 1
+    buffer:
+      type: memory
+      max_events: 20000
+      when_full: block
+
+  metrics_out:
+    type: prometheus_exporter
+    inputs: [vector_metrics]
+    address: 0.0.0.0:9598

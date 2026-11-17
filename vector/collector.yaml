@@ -10,8 +10,17 @@ sources:
       method: newline_delimited   # NDJSON: одно событие на строку
     decoding:
       codec: json
+
   vector_metrics:
     type: internal_metrics
+
+  probe_in:
+    type: http_server
+    address: 0.0.0.0:8081
+    framing:
+      method: newline_delimited
+    decoding:
+      codec: json
 
 transforms:
   normalize:
@@ -21,6 +30,7 @@ transforms:
       del(.source_type)
       del(.path)
       del(.timestamp)
+      .collected_at = format_timestamp!(now(), format: "%Y-%m-%dT%H:%M:%S%.3fZ")
 
 sinks:
   to_kafka:
@@ -35,6 +45,11 @@ sinks:
       type: memory
       max_events: 10000
       when_full: block
+
+  discard:
+    type: blackhole
+    inputs: [ probe_in ]
+    print_interval_secs: 0
 
   metrics_out:
     type: prometheus_exporter

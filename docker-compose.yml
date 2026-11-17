@@ -59,8 +59,24 @@ services:
       - "8080:8080"   # приём событий от генератора
       - "8686:8686"   # API (vector top)
       - "9598:9598"   # метрики
+      - "8081:8081"
     depends_on:
       kafka:
+        condition: service_healthy
+    mem_limit: 512m
+
+  vector-shipper:
+    image: timberio/vector:0.41.1-debian
+    container_name: vector-shipper
+    volumes:
+      - ./vector/shipper.yaml:/etc/vector/vector.yaml:ro
+    ports:
+      - "8687:8686"   # API: на ноутбуке 8687, т.к. 8686 занят collector'ом
+      - "9599:9598"   # метрики: аналогично
+    depends_on:
+      kafka:
+        condition: service_healthy
+      clickhouse:
         condition: service_healthy
     mem_limit: 512m
 
